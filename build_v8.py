@@ -10,12 +10,11 @@ nb['cells'][0]['source'] = [
     "# Name That LLM: Version 8 — 10GB High-Capacity SOTA Engine\n",
     "\n",
     "### State-of-the-Art Multi-Paradigm Authorship Attribution across 18 Frontier LLMs\n",
-    "Maximized 10GB RAM utilization, high-capacity feature engineering, and hierarchical specialist gating:\n",
+    "Maximized 10GB RAM utilization, high-capacity feature engineering, and class-balanced stratification:\n",
     "- **Class-Balanced Stratified Master Union**: Ingests and harmonizes `ntl_open_pool`, `ntl-extra-api-passages`, `ntl-generations`, and `ntl-proxy-generations` into an equal-quota pool (6,500 clean passages per class × 18 classes = 117,000 passages), directly optimizing unweighted Balanced Accuracy.\n",
     "- **Dual-Risk Purity Filtering**: Purges prompt-leakage distortion (`flag_train_prompt_regen`) and Gemini 3.7 routing discrepancies (`flag_gemini37_routing_risk`).\n",
     "- **High-Capacity 540,000 N-Gram Feature Engine (`--svc_w 12.0`)**: Char (2,5) 250k, Word (1,3) 180k, Shape (2,6) 60k, Function (1,4) 50k with `min_df=3` noise filtering.\n",
     "- **In-Place CSR Memory Management**: Eliminates duplicate `hstack` copies, operating at ~8.5 GB peak RAM and immediately flushing back to 1.5 GB before neural models load.\n",
-    "- **Specialist Intra-Family Sub-Classifiers**: Dedicated 5-way Anthropic Claude, 4-way Google Gemini, and 4-way OpenAI GPT gates to eliminate intra-family sibling confusion.\n",
     "- **Dual-T4 DataParallel Sharding (`dp: True`)**: Parallelized Qwen3-8B and Llama-3.1-8B throughput.\n",
     "- **Judith Evidence Scaling (1.2) + Balanced Soft Sinkhorn (0.50)**: Stable marginal balancing.\n",
     "- **Zero-Crash Defensive Guard**: Safe execution guaranteed on hidden Kaggle test evaluation.\n"
@@ -90,8 +89,9 @@ nb['cells'][3]['source'] = [
 nb['cells'][4]['source'] = [
     "# Version 8: Stratified Sample of Master Pool for TF-IDF & Distortion members (2,500/class = 45k rows)\n",
     "import pandas as _pd2\n",
+    "import os as _os2\n",
     "POOL2 = '/kaggle/working/open_pool2_sample.parquet'\n",
-    "if _os.path.exists(POOL):\n",
+    "if _os2.path.exists(POOL):\n",
     "    _p2_df = _pd2.read_parquet(POOL)\n",
     "    _p2_parts = [_g.sample(min(len(_g), 2500), random_state=42) for _, _g in _p2_df.groupby('model')]\n",
     "    _p2_sample = _pd2.concat(_p2_parts, ignore_index=True)\n",
@@ -118,7 +118,7 @@ infer_src = infer_src.replace(
     "_evidence = np.clip(1.2 * _evidence / max(float(_fw.sum()), 1e-6), -0.30, 0.30)"
 )
 
-# Upgrade the SVC section in infer.py with 540k features, min_df=3, in-place CSR assembly, and Specialist Intra-Family Gates
+# Upgrade the SVC section in infer.py with 540k features, min_df=3, and in-place CSR assembly
 old_svc_marker = "if a.svc_w > 0:  # four-view SVC: official + matched-clean + pool, with source weights and exact de-duplication"
 old_distort_marker = "if a.distort_w > 0:  # Stamatatos-style text distortion: keep top-100 frequent words + punctuation, mask the rest"
 
@@ -128,13 +128,13 @@ distort_start = infer_src.find(old_distort_marker)
 assert svc_start != -1, "old_svc_marker not found"
 assert distort_start != -1, "old_distort_marker not found"
 
-new_svc_code = '''if a.svc_w > 0:  # four-view SVC: official + master stratified pool, 540k features, min_df=3, in-place CSR, specialist intra-family gates
+new_svc_code = '''if a.svc_w > 0:  # four-view SVC: official + master stratified pool, 540k features, min_df=3, in-place CSR assembly
     import re as _re
     from scipy.sparse import hstack as _hs
     from sklearn.svm import LinearSVC
     _FW = set("a an the and or but if while although because as so than that which who whom whose this these those it its they them their theirs he him his she her hers we us our ours you your yours i me my mine in on at to from with without for of by over under between through into about is are was were be been being have has had do does did can could will would shall should may might must not no nor all any some each every both either neither other another such only also just very too more most less least here there when where why how what whether then now still yet even much many few little".split())
-    _shape = lambda t: _re.sub(r"[^\W\d_]+", lambda m_: "X" if m_[0].isupper() else "x", t)
-    _func = lambda t: " ".join(w.lower() if w.lower() in _FW or not w.isalnum() else "CONTENT" for w in _re.findall(r"\w+|[^\w\s]", t))
+    _shape = lambda t: _re.sub(r"[^\\W\\d_]+", lambda m_: "X" if m_[0].isupper() else "x", t)
+    _func = lambda t: " ".join(w.lower() if w.lower() in _FW or not w.isalnum() else "CONTENT" for w in _re.findall(r"\\w+|[^\\w\\s]", t))
     _parts = []
     _official = train[['text', 'model']].copy(); _official['text'] = _official.text.fillna('').astype(str)
     _official['_srcw'] = 1.0
@@ -186,7 +186,7 @@ new_svc_code = '''if a.svc_w > 0:  # four-view SVC: official + master stratified
         prep = _shape if view == "shape" else _func if view == "function" else (lambda s_: s_)
         an = "char" if view == "shape" else "word" if view == "function" else view
         o = dict(analyzer=an, ngram_range=(lo, hi), lowercase=False, sublinear_tf=True, min_df=3, max_features=mf, dtype=np.float32)
-        if an == "word": o["token_pattern"] = r"(?u)\b\w+\b|[^\w\s]"
+        if an == "word": o["token_pattern"] = r"(?u)\\b\\w+\\b|[^\\w\\s]"
         _v = TfidfVectorizer(**o)
         _A.append(_v.fit_transform([prep(t) for t in _fit]) * wv)
         _B.append(_v.transform([prep(t) for t in test.text.values]) * wv)
@@ -201,31 +201,9 @@ new_svc_code = '''if a.svc_w > 0:  # four-view SVC: official + master stratified
     _d = _svc.decision_function(_B_mat)
     LP['svc4'] = (_d - _d.max(1, keepdims=True) - np.log(np.exp(_d - _d.max(1, keepdims=True)).sum(1, keepdims=True))) * a.svc_w
     log('global svc4 fit complete')
-    
-    # Train Specialist Intra-Family Gates on high-capacity vectorized features
-    _FAMILIES = {
-        'claude': [c for c in LABELS if 'claude' in c],
-        'gemini': [c for c in LABELS if 'gemini' in c],
-        'gpt': [c for c in LABELS if 'gpt' in c or '5.5' in c],
-    }
-    for fam_name, fam_models in _FAMILIES.items():
-        fam_idx = [L2I[m] for m in fam_models]
-        fam_mask_tr = np.isin(_fy, fam_idx)
-        if fam_mask_tr.sum() > 100:
-            _fam_y = np.array([fam_models.index(I2L[y_]) for y_ in _fy[fam_mask_tr]])
-            _gate = LinearSVC(C=1.0, random_state=42, max_iter=3000, class_weight='balanced')
-            _gate.fit(_A_mat[fam_mask_tr], _fam_y, sample_weight=_sw[fam_mask_tr])
-            _gate_d = _gate.decision_function(_B_mat)
-            if len(fam_models) == 2 and _gate_d.ndim == 1:
-                _gate_d = np.column_stack([-_gate_d, _gate_d])
-            _gate_lp = _gate_d - _gate_d.max(1, keepdims=True) - np.log(np.exp(_gate_d - _gate_d.max(1, keepdims=True)).sum(1, keepdims=True))
-            LP[f'gate_{fam_name}'] = np.zeros((len(test), 18), dtype=np.float32)
-            for i_sub, m in enumerate(fam_models):
-                LP[f'gate_{fam_name}'][:, L2I[m]] = _gate_lp[:, i_sub]
-            log(f'Specialist {fam_name} gate fitted on {fam_mask_tr.sum()} rows ({len(fam_models)} classes)')
     del _A_mat, _B_mat, _parts, _fitdf, _svc
     gc.collect()
-    log('svc4 and specialist gates completed; memory cleared to baseline')
+    log('svc4 completed; memory cleared to baseline')
 '''
 
 infer_src = infer_src[:svc_start] + new_svc_code + infer_src[distort_start:]
@@ -246,28 +224,36 @@ if getattr(a, 'pool2', '') and os.path.exists(a.pool2) and float(getattr(a, 'poo
 
 nb['cells'][10]['source'] = [infer_src]
 
-# Update Cell 11: Since everything is cleanly integrated into infer.py, cell 11 simply validates infer.py integrity
+# Update Cell 11: Validates infer.py integrity cleanly without fragile asserts
 nb['cells'][11]['source'] = [
     "# Version 8 Verification: assert infer.py contains all high-capacity modules\n",
     "import ast\n",
     "_p = '/kaggle/working/infer.py'\n",
     "_src = open(_p, encoding='utf-8').read()\n",
-    "assert 'gate_claude' in _src, 'Specialist Claude gate missing in infer.py'\n",
-    "assert 'gate_gemini' in _src, 'Specialist Gemini gate missing in infer.py'\n",
-    "assert 'gate_gpt' in _src, 'Specialist GPT gate missing in infer.py'\n",
     "assert 'master stratified pool' in _src, 'SVC high-capacity pool missing'\n",
     "ast.parse(_src)\n",
     "print('infer.py verified: size', len(_src), 'AST parse passed successfully', flush=True)\n"
 ]
 
+# Update Cell 15: Pure Python subprocess execution of comp_stack.py
+nb['cells'][15]['source'] = [
+    "# complementary public stack in its own process (frees all GPU memory when done); its wall time is charged to the ATLAS budget\n",
+    "import time as _t\n",
+    "import os, sys, subprocess\n",
+    "_c0 = _t.time()\n",
+    "os.environ['NTL_DROP_Q35'] = '0'\n",
+    "if not FAST_COMMIT:\n",
+    "    _res = subprocess.run([sys.executable, 'comp_stack.py'])\n",
+    "    print('comp stack process exited with code:', _res.returncode, flush=True)\n",
+    "COMP_SEC = _t.time() - _c0\n",
+    "print('comp stack wall time', round(COMP_SEC), flush=True)\n"
+]
+
 # Update Cell 17: Runner cell with full 10GB configuration, DataParallel, Judith evidence, Soft Sinkhorn 0.50, and Zero-Crash Fallback
 runner_src = ''.join(nb['cells'][17]['source'])
-
-# Ensure --sinkhorn 0.50, --svc_w 12, --pool str(POOL), --pool2 str(POOL2), --pool2_w 0.35, --pool2_tfidf 0.35
 runner_src = re.sub(r"'--sinkhorn',\s*'[0-9.]+'", "'--sinkhorn', '0.50'", runner_src)
 runner_src = re.sub(r"'--svc_w',\s*'[0-9.]+'", "'--svc_w', '12'", runner_src)
 
-# Ensure zero-crash fallback wrapper around main execution
 zero_crash_block = """print('RUNNING MAIN INFERENCE', flush=True)
 if FAST_COMMIT:   # fork: placeholder from the commit run; Kaggle reruns the notebook on the hidden test
     _test_ph = pd.read_csv(os.path.join(DATA, 'test.csv'))
@@ -293,26 +279,11 @@ assert set(submission.columns) == {'id', 'model'} and submission.id.is_unique an
 print('Submission verified: shape', submission.shape)
 print(submission.head(10))"""
 
-# Replace runner execution block
 old_run_idx = runner_src.find("print('RUNNING MAIN INFERENCE'")
 if old_run_idx != -1:
     runner_src = runner_src[:old_run_idx] + zero_crash_block
 
 nb['cells'][17]['source'] = [runner_src]
-
-# Update Cell 15: Pure Python subprocess execution of comp_stack.py
-nb['cells'][15]['source'] = [
-    "# complementary public stack in its own process (frees all GPU memory when done); its wall time is charged to the ATLAS budget\n",
-    "import time as _t\n",
-    "import os, sys, subprocess\n",
-    "_c0 = _t.time()\n",
-    "os.environ['NTL_DROP_Q35'] = '0'\n",
-    "if not FAST_COMMIT:\n",
-    "    _res = subprocess.run([sys.executable, 'comp_stack.py'])\n",
-    "    print('comp stack process exited with code:', _res.returncode, flush=True)\n",
-    "COMP_SEC = _t.time() - _c0\n",
-    "print('comp stack wall time', round(COMP_SEC), flush=True)\n"
-]
 
 # Save to kaggle_v8
 out_path = 'kaggle_v8/name-that-llm-v8-apex-10gb.ipynb'

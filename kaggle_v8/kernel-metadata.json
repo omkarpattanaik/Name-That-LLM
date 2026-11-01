@@ -1,5 +1,5 @@
 {
-  "id": "omkarpattanaik123/name-that-llm-v8-apex-10gb-engine",
+  "id": "omkarpattanaik123/name-that-llm-v8-apex-10gb-sota-engine",
   "title": "Name That LLM V8 Apex 10GB SOTA Engine",
   "code_file": "name-that-llm-v8-apex-10gb.ipynb",
   "language": "python",
@@ -50,4 +50,3 @@
   ],
   "machine_shape": "NvidiaTeslaT4"
 }
-
