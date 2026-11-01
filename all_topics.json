@@ -1,0 +1,142 @@
+[
+  {
+    "id": 749382,
+    "title": "How to get started + Competition's Official Discord",
+    "author": "",
+    "comments": 4,
+    "score": 18
+  },
+  {
+    "id": 754463,
+    "title": "Title: Beginner question: where does the gap between ~0.66 and ~0.70+ come from?",
+    "author": "",
+    "comments": 2,
+    "score": 0
+  },
+  {
+    "id": 752766,
+    "title": "[UPDATED] Clean data beats more data (Open Pool v10 out now)",
+    "author": "",
+    "comments": 14,
+    "score": 58
+  },
+  {
+    "id": 753177,
+    "title": "Retrained the Qwen2.5-14B member of nlm-v27 on the 120k pool: OOF 0.569 \u2192 0.605, public LB 0.651 \u2192 0.647. Why?",
+    "author": "",
+    "comments": 6,
+    "score": 6
+  },
+  {
+    "id": 754427,
+    "title": "I couldn't replace the Llama member: three add-on attempts that didn't recover the score",
+    "author": "",
+    "comments": 0,
+    "score": 0
+  },
+  {
+    "id": 754426,
+    "title": "Harden a fork, then measure every part on the hidden test: my cheap ablation workflow",
+    "author": "",
+    "comments": 0,
+    "score": 0
+  },
+  {
+    "id": 752084,
+    "title": "Open rules questions in one place: generated data (\u00a72.6), Benchmarks quota, winner licence, test-time inference",
+    "author": "",
+    "comments": 6,
+    "score": 4
+  },
+  {
+    "id": 752365,
+    "title": "Sinkhorn balancing: what it costs when the test mix is uneven",
+    "author": "",
+    "comments": 2,
+    "score": 1
+  },
+  {
+    "id": 754131,
+    "title": "My popular ATLAS adapter vs Uniform Smoothing",
+    "author": "",
+    "comments": 1,
+    "score": 2
+  },
+  {
+    "id": 753974,
+    "title": "New external dataset: 9,719 OpenAI responses with exact prompts and provenance",
+    "author": "",
+    "comments": 1,
+    "score": 2
+  },
+  {
+    "id": 754084,
+    "title": "Ten LB points can't tell you which OOF to trust: a small simulation",
+    "author": "",
+    "comments": 0,
+    "score": 0
+  },
+  {
+    "id": 754026,
+    "title": "[ Ablation Note ] Why Prompt-Clustered Adaptive Centering + Target-Shrunk Sinkhorn-Knopp (\u03c1 = 0.35) Outperform Uniform Marginal Forcing",
+    "author": "",
+    "comments": 0,
+    "score": 0
+  },
+  {
+    "id": 751910,
+    "title": "How to request access llama-3.1",
+    "author": "",
+    "comments": 1,
+    "score": 0
+  },
+  {
+    "id": 749447,
+    "title": "Will the winner just be whoever can get the most amount of extra training data?",
+    "author": "",
+    "comments": 61,
+    "score": 132
+  },
+  {
+    "id": 753779,
+    "title": "[BIG UPDATE - please try it] Same data, +0.027 accuracy: 1 in 4 passages in the public NTL pool was junk or the wrong genre. I cleaned it (Open Pool v9)",
+    "author": "",
+    "comments": 0,
+    "score": 6
+  },
+  {
+    "id": 753526,
+    "title": "Stratified CV gives 0.13, prompt-grouped CV gives 0.31 (LB 0.308) for the same baseline",
+    "author": "",
+    "comments": 0,
+    "score": 0
+  },
+  {
+    "id": 750664,
+    "title": "What the punctuation already tells you about the 18 models (and what it can't)",
+    "author": "",
+    "comments": 9,
+    "score": 14
+  },
+  {
+    "id": 753382,
+    "title": "2\u00d7T4 torchrun LoRA: how skipping a non-finite batch lost me a 9-hour run, and a skip that is safe",
+    "author": "",
+    "comments": 0,
+    "score": 0
+  },
+  {
+    "id": 753053,
+    "title": "Why grouped CV over-picks test-time centring, and a way to validate it against the test batch",
+    "author": "",
+    "comments": 1,
+    "score": 1
+  },
+  {
+    "id": 752997,
+    "title": "what exactly one have to do in kaggle comp(my first comp)",
+    "author": "",
+    "comments": 1,
+    "score": 0
+  }
+]

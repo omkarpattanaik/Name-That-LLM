@@ -1,0 +1,17 @@
+{
+  "id": "omkarpattanaik123/name-that-llm-v1-adaptive-family-gates",
+  "title": "Name That LLM - V1 Adaptive Family Gates",
+  "code_file": "name-that-llm-v1-adaptive-family-gates.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_tpu": "false",
+  "enable_internet": "false",
+  "dataset_sources": [],
+  "competition_sources": [
+    "name-that-llm"
+  ],
+  "kernel_sources": [],
+  "model_sources": []
+}

@@ -1,0 +1,30 @@
+{
+  "claude": {
+    "oof_balanced_accuracy": 0.43634899328859067,
+    "random_level": 0.2,
+    "alpha_mean": 0.07887858927938286,
+    "alpha_max": 0.07943842250501854,
+    "changed_within_family": 0
+  },
+  "gemini": {
+    "oof_balanced_accuracy": 0.4733333333333334,
+    "random_level": 0.25,
+    "alpha_mean": 0.07914444349128073,
+    "alpha_max": 0.07977080884455232,
+    "changed_within_family": 3
+  },
+  "gpt": {
+    "oof_balanced_accuracy": 0.4133333333333333,
+    "random_level": 0.2,
+    "alpha_mean": 0.07978076796094791,
+    "alpha_max": 0.07991570967107985,
+    "changed_within_family": 3
+  },
+  "glm": {
+    "oof_balanced_accuracy": 0.5433333333333333,
+    "random_level": 0.5,
+    "alpha_mean": 0.02260393791406064,
+    "alpha_max": 0.022722103311621965,
+    "changed_within_family": 1
+  }
+}

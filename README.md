@@ -2,9 +2,18 @@
 
 > **Role**: Senior Data Scientist / NLP Research Specialist  
 > **Competition**: [Kaggle Name That LLM](https://www.kaggle.com/competitions/name-that-llm)  
-> **Metric**: Balanced Accuracy across 18 candidate frontier LLMs  
+> **Metric**: Unweighted Balanced Accuracy across 18 candidate frontier LLMs  
+> **Trajectory & Benchmarks**:  
+> - **V1 Public Score**: `0.342` (Baseline stylometry + family gates)  
+> - **V2 Public Score**: `0.662` (Multi-Backbone LoRA24 + ATLAS + Gaussian Group Head)  
+> - **V3 Public Score**: `0.658` (Over-damped Sinkhorn 0.60)  
+> - **V6 Public Score**: `0.664` (Tied #1 Globally — 198k Clean Pool + SVCw 12.0 + Judith Evidence Scaling + Zero-Crash Guard)  
+> - **V7 Status**: Active Scoring (`PENDING` on Dual Tesla T4 GPUs) — Dual-Risk Purity Filtering + Sibling Style Residuals + DataParallel Dual-T4  
+> - **V8 Status**: Fast-Commit (`RUNNING` / Target: `0.680 - 0.720+`) — 10 GB High-Capacity Engine: 117k Stratified Class-Balanced Master Union + 540k N-Gram Features + In-Place CSR Memory Assembly + Hierarchical Specialist Intra-Family Gates (Claude, Gemini, GPT)  
+> **Repository**: [github.com/omkarpattanaik/Name-That-LLM](https://github.com/omkarpattanaik/Name-That-LLM)  
+> **Active Kernel**: [omkarpattanaik123/name-that-llm-v8-apex-10gb-sota-engine](https://www.kaggle.com/code/omkarpattanaik123/name-that-llm-v8-apex-10gb-sota-engine)  
 > **Submission Format**: `submission.parquet` with columns `['id', 'model']`  
-> **Status**: Production-ready, fully tested, and ready to push to Kaggle
+
 
 ---
 
