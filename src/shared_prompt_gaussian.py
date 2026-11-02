@@ -144,3 +144,4 @@ class SharedPromptGaussianDecomposer(BaseEstimator, ClassifierMixin):
     def predict(self, X: np.ndarray) -> np.ndarray:
         probs = self.predict_proba(X)
         return self.classes_[np.argmax(probs, axis=1)]
+

@@ -156,3 +156,4 @@ class HierarchicalGatesEnsemble:
         P = self.apply_gate_blend(P, self.gate_gemini, X_feats)
         P = self.apply_gate_blend(P, self.gate_zai_opus, X_feats)
         return P
+

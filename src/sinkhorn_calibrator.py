@@ -45,3 +45,4 @@ def target_shrunk_sinkhorn(
         M = M / row_sums
 
     return M.astype(np.float32)
+

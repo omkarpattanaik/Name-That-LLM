@@ -170,3 +170,4 @@ class DataCurator:
         for train_idx, val_idx in sgkf.split(df, df[target_col], df[group_col]):
             folds.append((train_idx, val_idx))
         return folds
+

@@ -99,3 +99,4 @@ class CohesionAdaptiveCentering:
             logits[adapt_indices] += self.twin_w * log_evidence
 
         return softmax(logits, axis=1).astype(np.float32)
+
