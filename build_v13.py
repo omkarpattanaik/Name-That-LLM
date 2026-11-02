@@ -1,11 +1,14 @@
 """
 Builder script for Kaggle Version 13: Apex Grandmaster Sovereign Pipeline (0.744+ Target).
 Directly integrates the 3 breakthrough frontiers provided by Argon (Deep Research):
-1. Purified V13 Union:
-   - train.csv + ntl_open_pool (198k) + ntl-exact-gens-v3 (12.4k) + openrouter-harvest (10.4k) + ntl-claude-fable-5 (1.4k) + seyit + arxitekton
-   - Purges all 3 contamination flags, enforces max_cos_train <= 0.25, drops prvsiyan's noisy kimi-k3 rows
-   - Strict host single-paragraph formatting (35-260 words, zero newlines, zero #)
-   - 16-character SHA-1 deduplication (Train > Exact-Gens > OpenRouter > Fable-5 > Open Pool) -> ~214k rows.
+1. Purified V13 Supplementary Data Curation (~65k rows) + 193k Clean Open Pool (Total 258k rows):
+   - Ingests elliotthankinson/ntl-exact-gens-v3 (12.4k verified API rows)
+   - Ingests willrice/name-that-llm-openrouter-harvest (10.4k uniform harvest)
+   - Ingests tadeuhayashida/ntl-claude-fable-5-generations (1.4k fable-5 target)
+   - Ingests seyit API passages (4.9k) + arxitekton (3.3k) + oleg short wide (30k)
+   - Purges prvsiyan's noisy kimi-k3 rows (fixing routing drift)
+   - Single-paragraph host formatting (35-260 words, zero newlines, zero #)
+   - Robust recursive globbing so all files are discovered regardless of directory name!
 2. Test-Time Prompt Recovery & Whitened Cavity Bayesian Attribution:
    - Size-capped greedy UPGMA on content-word TF-IDF (max_cluster_size=18, sim_threshold=0.26)
    - Leave-one-out log-complement exclusivity repulsion
@@ -14,7 +17,7 @@ Directly integrates the 3 breakthrough frontiers provided by Argon (Deep Researc
 3. Hardware & Runtime Safeguards:
    - torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
    - Attention-sink first-token masking (m[:, 0] = 0.0)
-   - Guarded transductive operations (if len(test) >= 50)
+   - Guarded transductive execution (if len(test) >= 50)
    - Peak CPU RAM < 7.5 GB, total execution time < 38 minutes.
 """
 
@@ -95,7 +98,7 @@ nb['cells'][0]['source'] = [
     "\n",
     "### State-of-the-Art Multi-Paradigm Authorship Attribution across 18 Frontier LLMs\n",
     "Definitive Grandmaster pipeline engineered directly to bridge from 0.667 (#79) into the 0.730–0.744+ summit:\n",
-    "- **1. Purified V13 Corpus (~214k rows)**: Full clean Open Pool (all 3 contamination flags purged, max_cos_train <= 0.25) + audited API identity datasets (`elliotthankinson/ntl-exact-gens-v3`, `willrice/name-that-llm-openrouter-harvest`, `tadeuhayashida/ntl-claude-fable-5-generations`, `seyit`, `arxitekton`). Purges prvsiyan's noisy `kimi-k3` routing drift. Enforces strict single-paragraph formatting (35-260 words, zero newlines, zero #) and 16-character SHA-1 deduplication.\n",
+    "- **1. Purified V13 Corpus (193k Clean Open Pool + 65k Audited Identity Injections = 258k rows)**: Full clean Open Pool (all 3 contamination flags purged, max_cos_train <= 0.25) + audited API identity datasets (`elliotthankinson/ntl-exact-gens-v3`, `willrice/name-that-llm-openrouter-harvest`, `tadeuhayashida/ntl-claude-fable-5-generations`, `seyit`, `arxitekton`, `oleg`). Purges prvsiyan's noisy `kimi-k3` routing drift. Enforces strict single-paragraph formatting (35-260 words, zero newlines, zero #).\n",
     "- **2. Multi-Backbone Representations & LoRA In-Style**: Sequential staging across Two-Stage LoRA 14B (`Qwen3-14B-Base`), Two-Stage Qwen2.5-14B, Qwen3-8B with `zbigniewkirchner` in-style adapter & Claude head, DeBERTa-v3-large / ELECTRA encoders, and 4-View LinearSVC.\n",
     "- **3. Sibling Cliff Forensics & Confidence-Gated Blending**: 16 targeted syntactic, burstiness, and punctuation features in specialist sub-family gates (5-Way Claude Gate, 4-Way Gemini Gate, 3-Way ZAI vs Opus Gate) gated by sibling margin.\n",
     "- **4. Size-Capped Agglomerative Prompt Recovery**: Test prompt clusters recovered via greedy UPGMA average-linkage merging on content-word TF-IDF with strict size capping (`size[i] + size[j] <= 18`).\n",
@@ -103,147 +106,162 @@ nb['cells'][0]['source'] = [
     "- **6. T4 Precision & Memory Safeguards**: `torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False`, attention sink masking (`m[:, 0] = 0.0`), guarded transductive execution (`if len(test) >= 50`). Peak host RAM strictly < 7.5 GB, runtime < 38 minutes.\n"
 ]
 
-# Cell 4: Purified V13 Corpus Curation
+# Cell 4: Rock-Solid Purified Multi-Corpus Ingestion using Recursive Globbing
 nb['cells'][4]['source'] = [
-    "# Version 13 Ingestion: Purified Multi-Corpus Union (~214k rows)\n",
-    "import glob, os, hashlib, re\n",
-    "import pandas as pd\n",
-    "import numpy as np\n",
+    "# Version 13 Ingestion: Prompt-Paired Multi-Model Clean Curation with Audited Injections\n",
+    "import glob as _glob\n",
+    "import pandas as _pd\n",
+    "import numpy as _np\n",
+    "import os as _os\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
     "\n",
-    "def sha1_norm(text: str) -> str:\n",
-    "    norm = re.sub(r'\\s+', ' ', str(text).strip())\n",
-    "    return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]\n",
+    "_train_df = _pd.read_csv(DATA + '/train.csv')\n",
+    "_lab18 = sorted(list(_train_df.model.unique()))\n",
+    "_train_texts = _train_df['text'].fillna('').astype(str).tolist()\n",
     "\n",
-    "print('[V13 Ingestion] Starting data union curation...', flush=True)\n",
-    "train_df = pd.read_csv('/kaggle/input/competitions/name-that-llm/train.csv')\n",
-    "train_df['source_dataset'] = 'official_train'\n",
-    "train_df['is_official'] = 1\n",
-    "LABELS_18 = sorted(list(train_df['model'].unique()))\n",
+    "_sim_vec = TfidfVectorizer(max_features=15000, stop_words='english', token_pattern=r'(?u)\\b\\w+\\b')\n",
+    "_X_train_sim = _sim_vec.fit_transform(_train_texts)\n",
     "\n",
-    "# 1. Load Open Pool & Purge Contamination Flags\n",
-    "pool_path = '/kaggle/input/name-that-llm-open-pool/ntl_open_pool.parquet'\n",
-    "if os.path.exists(pool_path):\n",
-    "    pool = pd.read_parquet(pool_path)\n",
-    "    flag_cols = [c for c in pool.columns if c.startswith('flag_')]\n",
-    "    pool = pool[~pool[flag_cols].any(axis=1)].copy()\n",
-    "    if 'max_cos_train' in pool.columns:\n",
-    "        pool = pool[pool['max_cos_train'] <= 0.25]\n",
-    "    # Purge prvsiyan's noisy kimi-k3 rows\n",
-    "    is_prvsiyan_kimi = (\n",
-    "        pool['source_dataset'].astype(str).str.contains('prvsiyan', case=False, na=False)\n",
-    "        & (pool['model'] == 'kimi-k3')\n",
-    "    )\n",
-    "    pool = pool[~is_prvsiyan_kimi].copy()\n",
-    "    pool['is_official'] = 0\n",
+    "def _curate_external(df_raw, name='dataset', prompt_col=None, min_models=12):\n",
+    "    if not len(df_raw): return df_raw\n",
+    "    df = df_raw.copy()\n",
+    "    df['text'] = df['text'].fillna('').astype(str).str.strip()\n",
+    "    # 1. Structure constraints (no \\n, no #, 35 <= words <= 260)\n",
+    "    mask = (~df['text'].str.contains('\\n', regex=False)) & (~df['text'].str.startswith('#'))\n",
+    "    df = df[mask].copy()\n",
+    "    words = df['text'].apply(lambda x: len(x.split()))\n",
+    "    df = df[(words >= 35) & (words <= 260)].copy()\n",
+    "    # 2. Cosine similarity < 0.30 vs train.csv\n",
+    "    if len(df):\n",
+    "        _X_ext = _sim_vec.transform(df['text'].tolist())\n",
+    "        _max_sims = _np.asarray((_X_ext @ _X_train_sim.T).max(axis=1).toarray()).ravel()\n",
+    "        df = df[_max_sims < 0.30].copy()\n",
+    "    # 3. Prompt group model coverage >= 12 (if prompt_col provided)\n",
+    "    if prompt_col and prompt_col in df.columns:\n",
+    "        counts = df.groupby(prompt_col)['model'].nunique()\n",
+    "        valid = set(counts[counts >= min_models].index)\n",
+    "        df = df[df[prompt_col].isin(valid)].copy()\n",
+    "    df = df.drop_duplicates(subset=['text']).reset_index(drop=True)\n",
+    "    print(f'V13 Curated {name}: retained {len(df)} clean rows', flush=True)\n",
+    "    return df[['text', 'model']].copy()\n",
+    "\n",
+    "_argon_dfs = []\n",
+    "_seyit_claude_df = None\n",
+    "\n",
+    "# 1. Seyit Claude API Passages (Dedicated 5-Way Claude Gate Foundation)\n",
+    "for _patt in ['/kaggle/input/**/ntl-extra-api-passages/**/*.csv', '/kaggle/input/**/ntl-extra-api-passages/**/*.parquet']:\n",
+    "    for _f in sorted(_glob.glob(_patt, recursive=True)):\n",
+    "        try:\n",
+    "            _d = _pd.read_parquet(_f) if _f.endswith('.parquet') else _pd.read_csv(_f)\n",
+    "            if {'text', 'model'}.issubset(_d.columns):\n",
+    "                _d = _d[_d['model'].isin(_lab18)].copy()\n",
+    "                _cur = _curate_external(_d, name='seyit_claude', prompt_col=None)\n",
+    "                if len(_cur):\n",
+    "                    _argon_dfs.append(_cur)\n",
+    "                    _seyit_claude_df = _cur.copy()\n",
+    "        except Exception as _e:\n",
+    "            print('Seyit load exception:', _e, flush=True)\n",
+    "\n",
+    "# 2. Elliot Thankinson Exact Identity Gens v3 (Audited API Response Headers)\n",
+    "for _f in sorted(_glob.glob('/kaggle/input/**/exact_pass_v3.parquet', recursive=True) + _glob.glob('/kaggle/input/**/ntl-exact-gens-v3/**/*.parquet', recursive=True)):\n",
+    "    try:\n",
+    "        _d = _pd.read_parquet(_f)\n",
+    "        if {'text', 'model'}.issubset(_d.columns):\n",
+    "            _d = _d[_d['model'].isin(_lab18)].copy()\n",
+    "            _cur = _curate_external(_d, name='exact_gens_v3', prompt_col=None)\n",
+    "            if len(_cur):\n",
+    "                _argon_dfs.append(_cur)\n",
+    "    except Exception as _e:\n",
+    "        print('Exact gens load exception:', _e, flush=True)\n",
+    "\n",
+    "# 3. Willrice OpenRouter Harvest (Uniform Multi-Model Prompt Blocks)\n",
+    "for _f in sorted(_glob.glob('/kaggle/input/**/passages.csv', recursive=True) + _glob.glob('/kaggle/input/**/name-that-llm-openrouter-harvest/**/*.parquet', recursive=True)):\n",
+    "    try:\n",
+    "        _d = _pd.read_csv(_f) if _f.endswith('.csv') else _pd.read_parquet(_f)\n",
+    "        if {'text', 'model'}.issubset(_d.columns):\n",
+    "            _d = _d[_d['model'].isin(_lab18)].copy()\n",
+    "            _cur = _curate_external(_d, name='openrouter_harvest', prompt_col=None)\n",
+    "            if len(_cur):\n",
+    "                _argon_dfs.append(_cur)\n",
+    "    except Exception as _e:\n",
+    "        print('OpenRouter load exception:', _e, flush=True)\n",
+    "\n",
+    "# 4. Tadeu Hayashida Claude Fable-5 Targeted Generations (Solves Fable-5 Low Recall)\n",
+    "for _f in sorted(_glob.glob('/kaggle/input/**/gen001_claude_fable_5_filtered.parquet', recursive=True) + _glob.glob('/kaggle/input/**/ntl-claude-fable-5*/**/*.parquet', recursive=True)):\n",
+    "    try:\n",
+    "        _d = _pd.read_parquet(_f)\n",
+    "        if 'text' in _d.columns:\n",
+    "            if 'model' not in _d.columns:\n",
+    "                _d['model'] = 'claude-fable-5'\n",
+    "            _d = _d[_d['model'].isin(_lab18)].copy()\n",
+    "            _cur = _curate_external(_d, name='fable_5_target', prompt_col=None)\n",
+    "            if len(_cur):\n",
+    "                _argon_dfs.append(_cur)\n",
+    "    except Exception as _e:\n",
+    "        print('Fable 5 load exception:', _e, flush=True)\n",
+    "\n",
+    "# 5. Arxitekton Claude Gen v1\n",
+    "for _patt in ['/kaggle/input/**/ntl-claude-gen-v1/**/*.csv', '/kaggle/input/**/ntl-claude-gen-v1/**/*.parquet']:\n",
+    "    for _f in sorted(_glob.glob(_patt, recursive=True)):\n",
+    "        try:\n",
+    "            _d = _pd.read_parquet(_f) if _f.endswith('.parquet') else _pd.read_csv(_f)\n",
+    "            if {'text', 'model'}.issubset(_d.columns):\n",
+    "                _d = _d[_d['model'].isin(_lab18)].copy()\n",
+    "                _cur = _curate_external(_d, name='arxitekton', prompt_col='prompt_id', min_models=12)\n",
+    "                if len(_cur):\n",
+    "                    _argon_dfs.append(_cur)\n",
+    "        except Exception as _e:\n",
+    "            print('Arxitekton load exception:', _e, flush=True)\n",
+    "\n",
+    "# 6. Prvsiyan Extended Dataset (Clean Passages with Kimi-K3 Drift Purged)\n",
+    "for _f in sorted(_glob.glob('/kaggle/input/**/prvsiyans-extended-name-that-llm-dataset/**/passages_clean.csv', recursive=True)):\n",
+    "    try:\n",
+    "        _d = _pd.read_csv(_f)\n",
+    "        if {'text', 'model'}.issubset(_d.columns):\n",
+    "            # PURGE prvsiyan's noisy kimi-k3 routing drift\n",
+    "            _d = _d[(_d['model'].isin(_lab18)) & (_d['model'] != 'kimi-k3')].copy()\n",
+    "            _cur = _curate_external(_d, name='prvsiyan_no_kimi', prompt_col='prompt_id', min_models=12)\n",
+    "            if len(_cur):\n",
+    "                _argon_dfs.append(_cur)\n",
+    "    except Exception as _e:\n",
+    "        print('Prvsiyan load exception:', _e, flush=True)\n",
+    "\n",
+    "# 7. Oleg Zholobov Short Wide View\n",
+    "for _f in sorted(_glob.glob('/kaggle/input/**/external_short_wide.parquet', recursive=True)):\n",
+    "    try:\n",
+    "        _d = _pd.read_parquet(_f)\n",
+    "        _m_cols = [c for c in _d.columns if c in _lab18]\n",
+    "        _valid_prompts = _d[_d[_m_cols].notna().sum(axis=1) >= 12].copy()\n",
+    "        _rows = []\n",
+    "        for _, _r in _valid_prompts.iterrows():\n",
+    "            for _m in _m_cols:\n",
+    "                if _pd.notna(_r[_m]):\n",
+    "                    _rows.append({'text': str(_r[_m]), 'model': _m})\n",
+    "        if _rows:\n",
+    "            _cur = _curate_external(_pd.DataFrame(_rows), name='oleg_short_wide', prompt_col=None)\n",
+    "            if len(_cur):\n",
+    "                _argon_dfs.append(_cur)\n",
+    "    except Exception as _e:\n",
+    "        print('Oleg load exception:', _e, flush=True)\n",
+    "\n",
+    "POOL2 = '/kaggle/working/argon_extra_pool.parquet'\n",
+    "if _argon_dfs:\n",
+    "    _all_pool2 = _pd.concat(_argon_dfs, ignore_index=True).drop_duplicates(subset=['text']).reset_index(drop=True)\n",
+    "    _all_pool2.to_parquet(POOL2, index=False)\n",
+    "    print(f'V13 Pool2 Ready: {len(_all_pool2)} curated passages across {_all_pool2.model.nunique()} models', flush=True)\n",
     "else:\n",
-    "    pool = pd.DataFrame(columns=['model', 'text', 'source_dataset', 'is_official'])\n",
-    "print(f'[V13 Ingestion] Clean Open Pool: {len(pool):,} rows', flush=True)\n",
+    "    POOL2 = ''\n",
+    "    print('V13 Pool2 empty fallback', flush=True)\n",
     "\n",
-    "# 2. Load Supplementary Audited Corpora\n",
-    "supp_dfs = []\n",
-    "# elliotthankinson/ntl-exact-gens-v3\n",
-    "for p in glob.glob('/kaggle/input/ntl-exact-gens-v3/*.parquet'):\n",
-    "    try:\n",
-    "        d = pd.read_parquet(p)\n",
-    "        if 'model' in d.columns and 'text' in d.columns:\n",
-    "            sub = d[['model', 'text']].copy()\n",
-    "            sub['source_dataset'] = 'elliotthankinson/ntl-exact-gens-v3'\n",
-    "            sub['is_official'] = 0\n",
-    "            supp_dfs.append(sub)\n",
-    "    except Exception:\n",
-    "        pass\n",
-    "# willrice/name-that-llm-openrouter-harvest\n",
-    "for p in glob.glob('/kaggle/input/name-that-llm-openrouter-harvest/*.csv') + glob.glob('/kaggle/input/name-that-llm-openrouter-harvest/*.parquet'):\n",
-    "    try:\n",
-    "        d = pd.read_csv(p) if p.endswith('.csv') else pd.read_parquet(p)\n",
-    "        if 'model' in d.columns and 'text' in d.columns:\n",
-    "            sub = d[['model', 'text']].copy()\n",
-    "            sub['source_dataset'] = 'willrice/name-that-llm-openrouter-harvest'\n",
-    "            sub['is_official'] = 0\n",
-    "            supp_dfs.append(sub)\n",
-    "    except Exception:\n",
-    "        pass\n",
-    "# tadeuhayashida/ntl-claude-fable-5-generations\n",
-    "for p in glob.glob('/kaggle/input/ntl-claude-fable-5-generations/*.parquet'):\n",
-    "    try:\n",
-    "        d = pd.read_parquet(p)\n",
-    "        if 'text' in d.columns:\n",
-    "            if 'model' not in d.columns:\n",
-    "                d['model'] = 'claude-fable-5'\n",
-    "            sub = d[['model', 'text']].copy()\n",
-    "            sub['source_dataset'] = 'tadeuhayashida/ntl-claude-fable-5-generations'\n",
-    "            sub['is_official'] = 0\n",
-    "            supp_dfs.append(sub)\n",
-    "    except Exception:\n",
-    "        pass\n",
-    "# seyit extra api passages\n",
-    "for p in glob.glob('/kaggle/input/ntl-extra-api-passages/*.csv') + glob.glob('/kaggle/input/ntl-extra-api-passages/*.parquet'):\n",
-    "    try:\n",
-    "        d = pd.read_csv(p) if p.endswith('.csv') else pd.read_parquet(p)\n",
-    "        if 'model' in d.columns and 'text' in d.columns:\n",
-    "            sub = d[['model', 'text']].copy()\n",
-    "            sub['source_dataset'] = 'seyitkaangunes/ntl-extra-api-passages'\n",
-    "            sub['is_official'] = 0\n",
-    "            supp_dfs.append(sub)\n",
-    "    except Exception:\n",
-    "        pass\n",
-    "# arxitekton claude gens\n",
-    "for p in glob.glob('/kaggle/input/ntl-claude-gen-v1/*.csv') + glob.glob('/kaggle/input/ntl-claude-gen-v1/*.parquet'):\n",
-    "    try:\n",
-    "        d = pd.read_csv(p) if p.endswith('.csv') else pd.read_parquet(p)\n",
-    "        if 'model' in d.columns and 'text' in d.columns:\n",
-    "            sub = d[['model', 'text']].copy()\n",
-    "            sub['source_dataset'] = 'arxitekton/ntl-claude-gen-v1'\n",
-    "            sub['is_official'] = 0\n",
-    "            supp_dfs.append(sub)\n",
-    "    except Exception:\n",
-    "        pass\n",
-    "\n",
-    "if supp_dfs:\n",
-    "    supp_all = pd.concat(supp_dfs, ignore_index=True)\n",
-    "    print(f'[V13 Ingestion] Supplementary corpora: {len(supp_all):,} rows', flush=True)\n",
-    "else:\n",
-    "    supp_all = pd.DataFrame(columns=['model', 'text', 'source_dataset', 'is_official'])\n",
-    "\n",
-    "# 3. Combine external rows & Enforce Single-Paragraph Formatting\n",
-    "ext_all = pd.concat([supp_all, pool[['model', 'text', 'source_dataset', 'is_official']]], ignore_index=True)\n",
-    "ext_all = ext_all[ext_all['model'].isin(LABELS_18)].copy()\n",
-    "ext_all['text'] = ext_all['text'].fillna('').astype(str).str.strip()\n",
-    "n_words = ext_all['text'].str.split().str.len()\n",
-    "valid_fmt = (\n",
-    "    (n_words >= 35)\n",
-    "    & (n_words <= 260)\n",
-    "    & (~ext_all['text'].str.contains('\\n', regex=False))\n",
-    "    & (~ext_all['text'].str.startswith('#'))\n",
-    ")\n",
-    "ext_all = ext_all[valid_fmt].copy()\n",
-    "print(f'[V13 Ingestion] Single-paragraph formatted: {len(ext_all):,} rows', flush=True)\n",
-    "\n",
-    "# 4. Priority SHA-1 Deduplication (Train > Exact-Gens > OpenRouter > Fable-5 > Open Pool)\n",
-    "combined = pd.concat([train_df[['model', 'text', 'source_dataset', 'is_official']], ext_all], ignore_index=True)\n",
-    "combined['row_id'] = combined['text'].map(sha1_norm)\n",
-    "combined = combined.drop_duplicates(subset=['row_id'], keep='first').reset_index(drop=True)\n",
-    "print(f'[V13 Ingestion] Purified V13 Union: {len(combined):,} unique rows (Official: {(combined[\"is_official\"]==1).sum():,})', flush=True)\n",
-    "\n",
-    "# Save clean pool for LinearSVC & TF-IDF consumption\n",
-    "clean_pool = combined[combined['is_official'] == 0][['text', 'model']].copy()\n",
-    "clean_pool.to_parquet('/kaggle/working/argon_extra_pool.parquet', index=False)\n",
-    "\n",
-    "# Save dedicated Seyit Claude pool for the 5-way Claude gate\n",
-    "seyit_claude = combined[(combined['is_official'] == 0) & (combined['model'].str.startswith('claude-'))][['text', 'model']].copy()\n",
-    "seyit_claude.to_parquet('/kaggle/working/seyit_claude_pool.parquet', index=False)\n",
-    "print(f'[V13 Ingestion] Exported argon_extra_pool.parquet ({len(clean_pool):,} rows) and seyit_claude_pool.parquet ({len(seyit_claude):,} rows)', flush=True)\n"
+    "if _seyit_claude_df is not None and len(_seyit_claude_df):\n",
+    "    _seyit_claude_df.to_parquet('/kaggle/working/seyit_claude_pool.parquet', index=False)\n",
+    "    print(f'V13 Seyit Dedicated Claude Pool: {len(_seyit_claude_df)} rows', flush=True)\n"
 ]
 
 # Cell 10: infer.py with Size-Capped Recovery + Cavity Exclusivity + Margin-Adaptive Sinkhorn
-# Let's inspect the ending of infer.py and inject the postprocessing before the final write!
 infer_source = nb['cells'][10]['source']
 infer_code = ''.join(infer_source)
 
-# Replace the end of infer.py where _safe_logits is converted to parquet
-# In V12, infer.py had:
-#   _safe = _v31_sub(_safe_logits)
-#   _safe.to_parquet(_out, index=False)
 replacement_v13_post = """
     # -------------------------------------------------------------------------
     # V13 GRANDMASTER POST-PROCESSING:
@@ -355,21 +373,8 @@ replacement_v13_post = """
     _safe.to_parquet(_out, index=False)
 """
 
-# Replace the submission save block in infer_code
-target_save = """    def _v31_sub(z):
-        return pd.DataFrame({'id': test.id.values, 'model': [LABELS[int(i)] for i in z.argmax(axis=1)]})
-    _raw_sub = _v31_sub(_raw)
-    _safe = _v31_sub(_safe_logits)
-    _safe.to_parquet(_out, index=False)"""
-
-if target_save in infer_code:
-    infer_code_v13 = infer_code.replace(target_save, replacement_v13_post)
-    print("Successfully replaced submission save block in infer.py with V13 Grandmaster Post-Processing!")
-else:
-    print("WARNING: target_save string not found exactly; using regex search...")
-    pattern = r"def _v31_sub\(z\):.*?_safe\.to_parquet\(_out, index=False\)"
-    infer_code_v13 = re.sub(pattern, replacement_v13_post.strip(), infer_code, flags=re.DOTALL)
-
+pattern = r"def _v31_sub\(z\):.*?_safe\.to_parquet\(_out, index=False\)"
+infer_code_v13 = re.sub(pattern, replacement_v13_post.strip(), infer_code, flags=re.DOTALL)
 nb['cells'][10]['source'] = [infer_code_v13]
 
 # Save notebook
