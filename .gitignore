@@ -14,3 +14,4 @@ deberta_v3_large/
 *.zip
 *.safetensors
 *.bin
+tmp_inspect/

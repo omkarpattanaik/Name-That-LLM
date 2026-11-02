@@ -44,3 +44,4 @@ print('Meta logits shape:', logits.shape)
 p_final = apply_soft_cluster_exclusivity_and_sinkhorn(logits, cids, cweights)
 print('Final prob shape:', p_final.shape, 'Row sum check:', p_final.sum(axis=1)[:3])
 print('All tests in argon_v11_sota passed cleanly!')
+

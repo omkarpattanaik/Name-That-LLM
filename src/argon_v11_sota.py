@@ -357,3 +357,4 @@ def compute_domain_protected_sample_weights(
                 weights_ext[idx] = alpha_s * (n_tr_c / float(len(idx))) * q_norm
 
     return np.concatenate([weights_tr, weights_ext])
+
