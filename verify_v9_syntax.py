@@ -36,3 +36,4 @@ if errors == 0:
 else:
     print(f'FOUND {errors} SYNTAX ERRORS!')
     sys.exit(1)
+

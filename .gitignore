@@ -2,6 +2,15 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 tmp_test_dir/
+tmp_v8_out/
+tmp_v8_check/
+kaggle_out/
 *.tmp
 *.log
 .DS_Store
+data/
+deberta_v3_large/
+*.parquet
+*.zip
+*.safetensors
+*.bin
