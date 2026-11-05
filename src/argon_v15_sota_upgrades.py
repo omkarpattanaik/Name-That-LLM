@@ -237,3 +237,4 @@ def target_shrunk_damped_sinkhorn(
         log_P = log_P - logsumexp(log_P, axis=1, keepdims=True)
 
     return np.exp(log_P)
+
