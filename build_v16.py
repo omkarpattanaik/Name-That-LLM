@@ -5,7 +5,7 @@ Fixes:
    to eliminate the NameError: name 'logsumexp' is not defined crash in Target-Shrunk Damped Sinkhorn
    and ensure V34.1 Pairwise Verifier runs without unhandled exceptions.
 2. Fast Commit Self-Test: Added active CLI validation ('python infer.py --help') and mathematical smoke test
-   in Cell 20, guaranteeing that import or syntax regressions are immediately detected during commit.
+   with explicit numpy and pathlib imports in Cell 20, guaranteeing that import or syntax regressions are immediately detected.
 3. Incorporates all 6 Grandmaster Breakthroughs from V15:
    - Full 239k+ Clean Foundation: Safe Open Pool (3 contamination flags purged) + Matched-weight pool + Argon Multi-Corpus Pool2 (46.5k rows)
    - Stamatatos Topic Distortion Masking (+0.0319 OOF on secondary linear head)
@@ -43,7 +43,6 @@ nb['cells'][0]['source'] = [
 # Cell 14: infer.py with top-level logsumexp & pathlib imports
 infer_src = ''.join(nb['cells'][14]['source'])
 
-# Ensure top-level imports are fully specified
 old_import_block = "import os, sys, time, gc, argparse, json, re\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nimport numpy as np, pandas as pd, scipy.sparse as sp, torch\nfrom scipy.optimize import linear_sum_assignment"
 new_import_block = "import os, sys, time, gc, argparse, json, re, pathlib\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nimport numpy as np, pandas as pd, scipy.sparse as sp, torch\nfrom scipy.optimize import linear_sum_assignment\nfrom scipy.special import logsumexp"
 
@@ -51,7 +50,6 @@ if old_import_block in infer_src:
     infer_src = infer_src.replace(old_import_block, new_import_block)
     print("Successfully patched import block in infer.py (Cell 14)")
 else:
-    # Alternative replacement
     target = "import os, sys, time, gc, argparse, json, re\n"
     replacement = "import os, sys, time, gc, argparse, json, re, pathlib\nfrom scipy.special import logsumexp\n"
     assert target in infer_src, "Could not find import statement in infer.py"
@@ -60,7 +58,7 @@ else:
 
 nb['cells'][14]['source'] = [infer_src]
 
-# Cell 20: Add FAST_COMMIT Self-Test smoke check
+# Cell 20: Add FAST_COMMIT Self-Test smoke check with full imports
 cell20_src = ''.join(nb['cells'][20]['source'])
 old_fast_commit_block = (
     "if FAST_COMMIT:   # fork: placeholder from the commit run; Kaggle reruns the notebook on the hidden test\n"
@@ -74,7 +72,8 @@ new_fast_commit_block = (
     "if FAST_COMMIT:   # fork: placeholder from the commit run; Kaggle reruns the notebook on the hidden test\n"
     "    print('[V16 FAST_COMMIT SELF-TEST] Validating infer.py CLI and critical math...', flush=True)\n"
     "    subprocess.run([sys.executable, 'infer.py', '--help'], check=True)\n"
-    "    import pathlib\n"
+    "    import os, sys, pathlib\n"
+    "    import numpy as np, pandas as pd\n"
     "    from scipy.special import logsumexp\n"
     "    import sibling_style\n"
     "    _dummy_P = np.ones((2, 18), dtype=np.float64) / 18.0\n"
