@@ -89,3 +89,4 @@ assert "'--pool2_w', '0.0'" in c20, "--pool2_w 0.0 not found in Cell 20"
 print("PASS: Cell 20 calibrated temperature and clean pool parameters verified!")
 
 print("\n=== V18 VERIFICATION COMPLETE: ALL CHECKS PASSED ===")
+

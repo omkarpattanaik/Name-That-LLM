@@ -22,3 +22,4 @@ for s in subs[:6]:
     score = getattr(s, 'publicScore', getattr(s, 'public_score', 'N/A'))
     desc = getattr(s, 'description', 'N/A')
     print(f"Ref: {ref} | Date: {date} | Status: {status} | Public Score: {score} | Description: {desc}")
+

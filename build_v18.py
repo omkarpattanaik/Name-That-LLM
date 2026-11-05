@@ -86,3 +86,4 @@ out_meta_path = 'kaggle_v18/kernel-metadata.json'
 with open(out_meta_path, 'w', encoding='utf-8') as f:
     json.dump(clean_meta, f, indent=2)
 print(f'Successfully wrote {out_meta_path}')
+
