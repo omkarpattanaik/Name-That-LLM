@@ -9,7 +9,7 @@ res = api.competition_submit_code(
     message='V20 Sovereign Grandmaster Fusion: V12 (0.667 PB) 3-Flag Purge & POOL2 + Ozertuu (0.672+) Dual-SVC & Tri-Adapter 14B + 227-Feat Engine',
     competition='name-that-llm',
     kernel='omkarpattanaik123/name-that-llm-v20-sovereign-grandmaster-fusion',
-    kernel_version=1
+    kernel_version=2
 )
 print("Submission response:", res)
 
@@ -22,3 +22,4 @@ for s in subs[:6]:
     score = getattr(s, 'publicScore', getattr(s, 'public_score', 'N/A'))
     desc = getattr(s, 'description', 'N/A')
     print(f"Ref: {ref} | Date: {date} | Status: {status} | Public Score: {score} | Description: {desc}")
+
