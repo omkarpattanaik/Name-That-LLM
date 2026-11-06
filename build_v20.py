@@ -4,7 +4,7 @@ Unites:
 1. Version 12 (0.667 PB Benchmark):
    - 3-contamination-flag purged pristine open pool (flag_gemini37_routing_risk, flag_near_train_prompt, flag_train_prompt_regen)
    - Single-paragraph host constraints (40 <= W <= 250, no newline, no hash)
-   - Curated POOL2 multi-corpus ingestion (Seyit Claude, Arxitekton Claude, Prvsiyan, Oleg short-wide, cosine sim < 0.30, >=12 models/prompt)
+   - Curated POOL2 multi-corpus ingestion (Seyit Claude, Arxitekton Claude, Prvsiyan clean passages, cosine sim < 0.30, >=12 models/prompt)
    - Ingestion of POOL2 into online 4-view LinearSVC and TF-IDF (--pool2_w 0.35, --pool2_tfidf 0.35)
 2. Ozertuu / Version 19 (0.672+ Benchmark):
    - Dual-SVC: Online 4-View LinearSVC (w = 8.0) + Pre-fit 4-View SVC from Nuri Dudak (w = 4.0) (total SVC weight = 12.0)
@@ -37,7 +37,7 @@ nb['cells'][0]['source'] = [
     "\n",
     "### State-of-the-Art Multi-Paradigm Authorship Attribution across 18 Frontier LLMs\n",
     "Consolidates the highest-scoring breakthroughs across the entire competition history:\n",
-    "- **1. Purified 3-Flag Foundation & Curated POOL2 (from V12 PB 0.667)**: Purges all 3 contamination flags (`flag_gemini37_routing_risk`, `flag_near_train_prompt`, `flag_train_prompt_regen`) and enforces single-paragraph constraints ($40 \\le W \\le 250$, no `\\n`, no `#`). Ingests curated `POOL2` (`argon_extra_pool.parquet`) from Seyit Claude API passages, Arxitekton Claude Gen v1, Prvsiyan clean passages, and Oleg short-wide view (filtered at cosine sim $< 0.30$ vs train and $\\ge 12$ models/prompt).\n",
+    "- **1. Purified 3-Flag Foundation & Curated POOL2 (from V12 PB 0.667)**: Purges all 3 contamination flags (`flag_gemini37_routing_risk`, `flag_near_train_prompt`, `flag_train_prompt_regen`) and enforces single-paragraph constraints ($40 \\le W \\le 250$, no `\\n`, no `#`). Ingests curated `POOL2` (`argon_extra_pool.parquet`, 18.8k rows) from Seyit Claude API passages, Arxitekton Claude Gen v1, and Prvsiyan clean passages (filtered at cosine sim $< 0.30$ vs train and $\\ge 12$ models/prompt).\n",
     "- **2. Dual-SVC Architecture & Top-34 LightGBM (from Ozertuu 0.672+)**: Blends the online 4-view LinearSVC trained on `train + EXTRA + POOL + POOL2` (`w = 8.0`) with the pre-fitted `ntl-svc-prefit-pool-v4n` 4-view SVC (`w = 4.0`) and Top-34 LightGBM token-boundary classifier (`w = 0.15`).\n",
     "- **3. Tri-Adapter Qwen3-14B Backbone**: Combines three independent 14B LoRA checkpoints (`N14B` from Dhruv Tibarewal, `OQ1` and `OQ4` from Nuri Dudak) with weights `[0.34, 0.33, 0.33]` (`w = 2.8`) for deep multi-seed representation diversity.\n",
     "- **4. Extended 43k-Row Complementary Stack**: Ingests 43,071 multi-model prompt passages across 2,956 prompts from the open pool with pinned 2026-10-30 batches and within-family gates.\n",
@@ -170,23 +170,6 @@ for _f in sorted(glob.glob('/kaggle/input/**/prvsiyans-extended-name-that-llm-da
         if {'text', 'model'}.issubset(_d.columns):
             _d = _d[_d['model'].isin(_lab18)].copy()
             _cur = _curate_external(_d, name='prvsiyan', prompt_col='prompt_id', min_models=12)
-            if len(_cur): _argon_dfs.append(_cur)
-    except Exception as _e:
-        pass
-
-# Oleg Zholobov Short Wide View
-for _f in sorted(glob.glob('/kaggle/input/**/external_short_wide.parquet', recursive=True)):
-    try:
-        _d = _pd.read_parquet(_f)
-        _m_cols = [c for c in _d.columns if c in _lab18]
-        _valid_prompts = _d[_d[_m_cols].notna().sum(axis=1) >= 12].copy()
-        _rows = []
-        for _, _r in _valid_prompts.iterrows():
-            for _m in _m_cols:
-                if _pd.notna(_r[_m]):
-                    _rows.append({'text': str(_r[_m]), 'model': _m})
-        if _rows:
-            _cur = _curate_external(_pd.DataFrame(_rows), name='oleg_short_wide', prompt_col=None)
             if len(_cur): _argon_dfs.append(_cur)
     except Exception as _e:
         pass
@@ -653,12 +636,12 @@ clean_meta = {
         "nuridudak/ntl-q14-lora-v4",
         "nuridudak/ntl-svc-prefit-pool-v4n",
         "nishantdahal/ntl-two-stage-lora",
+        "nishantdahal/ntl-handwriting-blend",
         "dhruvtibarewal/nlm-l24-adapters-v5",
         "mercurydust/ntllm-chatgpt-a-b",
         "prvsiyan/prvsiyans-extended-name-that-llm-dataset",
         "pjmathematician/ultrabert-380m-ntl",
-        "arxitekton/ntl-claude-gen-v1",
-        "olegzholobov/name-that-llm-response-corpus"
+        "arxitekton/ntl-claude-gen-v1"
     ],
     "kernel_sources": [
         "lucasboesen/name-that-llm-glm4-9b-trunc25",
